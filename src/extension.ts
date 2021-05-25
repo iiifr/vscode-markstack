@@ -45,7 +45,7 @@ function markstack_push(){
 		mark_stack.push_mark_stack(doc_uri, s.start, docname, text);
 		let l = mark_stack.get_ms_len();
 		mark_stack.set_ms_pointer(l-1);
-		echo("MarkStack: "+ doc_uri + " " + s.start + "pushed, len=" + l);
+		echo(`MarkStack: ${docname} L${s.start.line+1} C${s.start.character+1} pushed, len=${l}`);
 		//L("WS URI: " + wsf_uri.toString());
 		//L("DOC URI: " + editor.document.uri.toString());
 		//L("DOC TXT: " + text);
@@ -164,7 +164,7 @@ function markstack_print(){
 		if (s_text.length > 50){
 			s_text = s_text.substr(0, 50) + "...";
 		}
-		s += `${s_ptr}${i} : ${pos.line} : ${pos.character} : ${stack[i].name} : ${s_text}\n`;
+		s += `${s_ptr}${i} : ${pos.line+1} : ${pos.character+1} : ${stack[i].name} : ${s_text}\n`;
 	}
 	s += " (TOP)";
 	echo(s, {modal: true});
