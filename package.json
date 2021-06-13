@@ -43,6 +43,10 @@
 			{
 				"command": "markstack.clear",
 				"title": "Clear mark stack"
+			},
+			{
+				"command": "markstack.test",
+				"title": "mark stack test"
 			}
 		]
 	},
