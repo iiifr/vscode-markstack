@@ -175,6 +175,54 @@ function markstack_clear(){
 	echo("MarkStack: stack cleared");
 }
 
+function markstack_status(){
+
+}
+
+class OnCursorLineIdle{
+	private uri;
+	private line;
+	private timeoutHandle;
+	private callback;
+	private idle_ms;
+	private update1 = () => {
+		clearTimeout(this.timeoutHandle);
+		let editor = vscode.window.activeTextEditor;
+		if (editor) {
+			let uri = editor.document.uri.toString();
+			let line = editor.selection.end.line;
+			if (this.uri != uri || this.line != line) {
+				this.uri = uri;
+				this.line = line;
+				this.timeoutHandle = setTimeout(this.update2, this.idle_ms);
+			}
+			//echo(`${this.uri} L${this.line}`);
+		}
+		else {
+			this.uri = '';
+			this.line = -1;
+		}
+	}
+	private update2 = () => {
+		let editor = vscode.window.activeTextEditor;
+		if (editor) {
+			if (editor.document.uri.toString() == this.uri && editor.selection.end.line == this.line) {
+				this.callback();
+			}
+		}
+	}
+
+	constructor(callback: () => void, idle_ms: number) {
+		this.callback = callback;
+		this.idle_ms = idle_ms;
+		this.uri = '';
+		this.line = -1;
+		this.timeoutHandle = setTimeout(()=>{}, 0);
+
+		vscode.window.onDidChangeTextEditorSelection(this.update1);
+	}
+}
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -183,6 +231,13 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	//console.log('Congratulations, your extension "markstack" is now active!');
 
+	var cursor_idle = new OnCursorLineIdle(function() {echo("Cursor line stopped")}, 2000);
+	//vscode.window.onDidChangeTextEditorSelection(function() {echo("Cursor changed")});
+	//let disposable = vscode.commands.registerCommand('markstack.test', function(){
+	//	let ed = vscode.window.activeTextEditor;
+
+	//});
+
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.push', markstack_push));
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.pop', markstack_pop));
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.currentEntry', markstack_current));
@@ -190,6 +245,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.prevEntry', markstack_prev));
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.print', markstack_print));
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.clear', markstack_clear));
+	//context.subscriptions.push(disposable);
 }
 
 // this method is called when your extension is deactivated
