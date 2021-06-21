@@ -163,53 +163,66 @@ class EditorGroupId {
 	//viewColumn:number; ID:number;
 	//map: viewColumn -> innerIndex
 	private idCount = 0;
+	private visibleEditorsLen = -1;
 	private editorIdSet = new WeakMap<vscode.TextEditor, {[name: string]: number}>();
 	private viewColumnToId = new Map<number, number>();
-	private update = (editor: vscode.TextEditor) => {
-		if (!editor.viewColumn || editor.viewColumn <= 0) {
-			return;
-		}
-		let viewColumn = editor.viewColumn.valueOf();
-		let idset = this.editorIdSet.get(editor);
-		if (idset !== undefined) {
-			this.viewColumnToId.set(viewColumn, idset.id);
-			idset.viewColumn = viewColumn;
-			this.editorIdSet.set(editor, idset);
-			L(`[groupId update][pin1] uri:${editor.document.uri.toString()} id:${idset.id} vcol:${idset.viewColumn}`);
+	private createID = () => { return this.idCount++; }
+	private update = () => {
+		/*
+		建立editor -> (viewColumn,groupID) map(A) ; viewColumn -> groupID map(B)
+		若len(VisibleTextEditors) == 舊len(VisibleTextEditors): //代表沒有建立分割視窗
+			將新editor依map(B)取得groupID, 記錄在map(A)
+		若len(VisibleTextEditors) != 舊len(VisibleTextEditors):
+			建新map(A), 新map(B)
+			若editor在舊map(A)中:
+				從舊map(A)取得groupID, 記錄在新map(A)
+				紀錄在新map(B)
+			若editor不在舊map(A)中:
+				建立新groupID, 記錄在新map(A)
+				紀錄在新map(B)
+		*/
+		if (vscode.window.visibleTextEditors.length == this.visibleEditorsLen) {
+			vscode.window.visibleTextEditors.forEach((editor, index, array) => {
+				if (editor.viewColumn !== undefined) {
+					let id = this.viewColumnToId.get(editor.viewColumn);
+					if (id === undefined) {
+						L("viewColumn -> groupID not found");
+					}
+					else {
+						this.editorIdSet.set(editor, {'viewColumn': editor.viewColumn, 'id': id});
+					}
+				}
+			});
 		}
 		else {
-			let id = this.viewColumnToId.get(viewColumn);
-			if (id !== undefined) {
-				this.editorIdSet.set(editor, {'viewColumn': viewColumn, 'id': id});
-				L(`[groupId update][pin2] uri:${editor.document.uri.toString()} id:${id} vcol:${viewColumn}`);
-			}
-			else {
-				this.editorIdSet.set(editor, {'viewColumn': viewColumn, 'id': this.idCount});
-				this.viewColumnToId.set(viewColumn, this.idCount);
-				this.idCount += 1;
-				L(`[groupId update][pin3] uri:${editor.document.uri.toString()} idCount:${this.idCount} vcol:${viewColumn}`);
-			}
+			let newEditorIdSet = new WeakMap<vscode.TextEditor, {[name: string]: number}>();
+			let newViewColumnToId = new Map<number, number>();
+			vscode.window.visibleTextEditors.forEach((editor, index, array) => {
+				if (editor.viewColumn !== undefined) {
+					let idset = this.editorIdSet.get(editor);
+					let id:number;
+					if (idset !== undefined) {
+						id = idset.id;
+					}
+					else {
+						id = this.createID();
+					}
+					newEditorIdSet.set(editor, {'viewColumn': editor.viewColumn, 'id': id});
+					newViewColumnToId.set(editor.viewColumn, id);
+				}
+			});
+			this.editorIdSet = newEditorIdSet;
+			this.viewColumnToId = newViewColumnToId;
+			this.visibleEditorsLen = vscode.window.visibleTextEditors.length;
 		}
-		let printMapElements = (value: number, key: number, map: any) => {
-			L(`vcol:${key} => id:${value}`)
-		}
-		L(`[groupId update] print viewColumnToId =============`);
-		this.viewColumnToId.forEach(printMapElements);
-		L(`[groupId update] ==================================`);
 	};
 
 	constructor() {
-		vscode.window.onDidChangeTextEditorViewColumn((e:vscode.TextEditorViewColumnChangeEvent) => {
-			this.update(e.textEditor);
-		});
+		this.update();
+		vscode.window.onDidChangeVisibleTextEditors(this.update);
 	}
-	getId(editor:vscode.TextEditor) {
-		let idset = this.editorIdSet.get(editor);
-		if (!idset) {
-			this.update(editor);
-			idset = this.editorIdSet.get(editor);
-		}
-		return (idset ? idset.id : undefined);
+	getId(viewColumn:number) {
+		return this.viewColumnToId.get(viewColumn);
 	}
 }
 
