@@ -1,12 +1,72 @@
 * 在 onStart 建立 editor -> (viewColumn,groupID) map(A) ; viewColumn -> groupID map(B)
 * onDidChangeVisibleTextEditors 時掃描所有visible editor:
-  若len(VisibleTextEditors) == 舊len(VisibleTextEditors): //代表沒有建立分割視窗
-    將新editor依map(B)取得groupID, 記錄在map(A)
-  若len(VisibleTextEditors) != 舊len(VisibleTextEditors):
     建新map(A), 新map(B)
     若editor在舊map(A)中:
       從舊map(A)取得groupID, 記錄在新map(A)
       紀錄在新map(B)
     若editor不在舊map(A)中:
-      建立新groupID, 記錄在新map(A)
+      若len(VisibleTextEditors) == 舊len(VisibleTextEditors): //代表沒有建立分割視窗
+        將新editor依map(B)取得groupID, 記錄在map(A)
+      若len(VisibleTextEditors) != 舊len(VisibleTextEditors):
+        建立新groupID, 記錄在新map(A)
       紀錄在新map(B)
+
+
+
+
+
+
+
+
+
+
+** new split window **
+[active editor changed] viewCol=undefined uri=undefined
+[visible editors changed]
+viewCol=1 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/main.c
+viewCol=2 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/ov7725.c
+viewCol=2 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/main.c
+[active editor changed] viewCol=2 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/main.c
+[editor viewCol changed] viewCol=3 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/ov7725.c
+
+** delete split window **
+[active editor changed] viewCol=3 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Inc/usb_device.h
+[visible editors changed]
+viewCol=1 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/main.c
+viewCol=3 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Inc/usb_device.h
+[editor viewCol changed] viewCol=2 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Inc/usb_device.h
+
+
+** new split window at end**
+[active editor changed] viewCol=undefined uri=undefined
+[visible editors changed]
+viewCol=1 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/main.c
+viewCol=2 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Inc/usb_device.h
+viewCol=3 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Inc/usb_device.h
+[active editor changed] viewCol=3 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Inc/usb_device.h
+
+** delete split window at end**
+[active editor changed] viewCol=2 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Inc/usb_device.h
+[visible editors changed]
+viewCol=1 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/main.c
+viewCol=2 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Inc/usb_device.h
+
+
+** new window tab **
+[visible editors changed]
+viewCol=1 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/main.c
+viewCol=3 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Inc/usb_device.h
+viewCol=2 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/stm32f7xx_it.c
+[active editor changed] viewCol=2 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/stm32f7xx_it.c
+
+** delete window tab **
+[visible editors changed]
+viewCol=1 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/main.c
+viewCol=2 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/main.c
+[active editor changed] viewCol=undefined uri=undefined
+[visible editors changed]
+viewCol=1 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/main.c
+viewCol=2 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Src/main.c
+viewCol=3 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Inc/usb_device.h
+[active editor changed] viewCol=3 uri=file:///c%3A/Users/iscre/Desktop/paperproj_openmv_m7_cubemx/Inc/usb_device.h
+
