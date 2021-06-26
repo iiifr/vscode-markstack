@@ -152,15 +152,22 @@ class MarkStack {
 		this.del_ms();
 		echo("MarkStack: stack cleared");
 	}
-	status(){
-
+	status(item:vscode.StatusBarItem){
+		item.text = `[MS] LEN:${this.get_ms_len()} IDX:${this.get_ms_pointer()}`;
 	}
 }
 
-class EditorGroupId {
-	private nextValidId = 1;
-	private viewColToId:number[] = [];
-	private createId = () => { return this.nextValidId++; }
+class GroupMarkStack {
+	private viewColToMs:MarkStack[] = [];
+	private statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 500);
+	private create = () => {
+		return new MarkStack();
+	};
+	private checkId = (viewColumn:number) => {
+		if (this.viewColToMs[viewColumn] === undefined) {
+			this.viewColToMs[viewColumn] = this.create();
+		}
+	};
 
 	private windowChangedAtMiddle = (editors: vscode.TextEditor[]) => {
 		//return value
@@ -177,27 +184,158 @@ class EditorGroupId {
 			if(rec[i] > 1) { return i;}
 		}
 		return 0;
+	};
+	private debugPrint = () => {
+		L("[viewColYoId][start]");
+		for(let i=1; i<this.viewColToMs.length; ++i) {
+			L(`viewCol=${i} id=${this.viewColToMs[i]}`);
+		}
+		L("[viewColYoId][end]");
+	};
+
+	constructor() {
+		vscode.window.visibleTextEditors.forEach((editor, idx, arr) => {
+			let viewcol = editor?.viewColumn;
+			if (viewcol !== undefined) {
+				this.viewColToMs[viewcol] = this.create();
+			}
+		});
+		vscode.window.onDidChangeActiveTextEditor((editor)=> {
+			let viewcol = editor?.viewColumn;
+			if (viewcol !== undefined) {
+				this.checkId(viewcol);
+			}
+			//this.debugPrint();
+			this.status();
+		})
+		vscode.window.onDidChangeVisibleTextEditors((editors) => {
+			let viewcol = this.windowChangedAtMiddle(editors);
+			if (viewcol > 0) {
+				for (let i=editors.length-1; i>=viewcol; --i){
+					this.viewColToMs[i+1] = this.viewColToMs[i];
+				}
+				this.viewColToMs[viewcol] = this.create();
+			}
+			else if (viewcol < 0) {
+				for (let i=(-viewcol); i<=editors.length; ++i){
+					this.viewColToMs[i] = this.viewColToMs[i+1];
+				}
+				this.viewColToMs.length = editors.length + 1;
+			}
+			//this.debugPrint();
+		});
+		//this.debugPrint();
+		this.status();
+		this.statusItem.show();
 	}
+	getItem(viewColumn:number) {
+		return this.viewColToMs[viewColumn];
+	}
+
+	// ----------------------------------------------------------------------------
+
+	private getMs() {
+		let vc = vscode.window.activeTextEditor?.viewColumn;
+		if (vc === undefined) { return undefined; }
+		else { return this.viewColToMs[vc]; }
+	}
+	private status(){
+		let ms = this.getMs();
+		if (ms !== undefined) { ms.status(this.statusItem); }
+	}
+	push = () => {
+		let ms = this.getMs();
+		if (ms !== undefined) {
+			ms.push();
+			ms.status(this.statusItem);
+		}
+	}
+	pop = () => {
+		let ms = this.getMs();
+		if (ms !== undefined) {
+			ms.pop();
+			ms.status(this.statusItem);
+		}
+	}
+	current = () => {
+		let ms = this.getMs();
+		if (ms !== undefined) {
+			ms.current();
+			ms.status(this.statusItem);
+	 	}
+	}
+	next = () => {
+		let ms = this.getMs();
+		if (ms !== undefined) {
+			ms.next();
+			ms.status(this.statusItem);
+		}
+	}
+	prev = () => {
+		let ms = this.getMs();
+		if (ms !== undefined) {
+			ms.prev();
+			ms.status(this.statusItem);
+		}
+	}
+	print = () => {
+		let ms = this.getMs();
+		if (ms !== undefined) { ms.print(); }
+	}
+	clear = () => {
+		let ms = this.getMs();
+		if (ms !== undefined) {
+			ms.clear();
+			ms.status(this.statusItem);
+		}
+	}
+}
+
+/*
+class EditorGroupId {
+	private nextValidId = 1;
+	private viewColToId:{}[] = [];
+	private createId = () => { return this.nextValidId++; };
+	private createObj:Function;
+	private create = () => {
+		return {'id': this.createId(), 'obj': this.createObj()};
+	};
 	private checkId = (viewColumn:number) => {
 		if (this.viewColToId[viewColumn] === undefined) {
-			this.viewColToId[viewColumn] = this.createId();
+			this.viewColToId[viewColumn] = this.create();
 		}
 	};
-	private correct = (e: vscode.TextEditorViewColumnChangeEvent) => {
-	}
+
+	private windowChangedAtMiddle = (editors: vscode.TextEditor[]) => {
+		//return value
+		//+n: new window is at viewColumn n
+		//-n: window at viewColumn n is removed
+		let rec = Array(editors.length + 1).fill(0);
+		editors.forEach((editor, index, array) => {
+			if (editor.viewColumn !== undefined) {
+				rec[editor.viewColumn] += 1;
+			}
+		});
+		for (let i = 1; i <= editors.length; ++i) {
+			if(rec[i] == 0) { return -i;}
+			if(rec[i] > 1) { return i;}
+		}
+		return 0;
+	};
 	private print = () => {
 		L("[viewColYoId][start]");
 		for(let i=1; i<this.viewColToId.length; ++i) {
 			L(`viewCol=${i} id=${this.viewColToId[i]}`);
 		}
 		L("[viewColYoId][end]");
-	}
+	};
 
-	constructor() {
+	constructor(createObjFunc = function():any { return undefined }) {
+		this.createObj = createObjFunc;
 		vscode.window.visibleTextEditors.forEach((editor, idx, arr) => {
 			let viewcol = editor?.viewColumn;
 			if (viewcol !== undefined) {
-				this.viewColToId[viewcol] = this.createId();
+				this.viewColToId[viewcol] = this.create();
 			}
 		});
 		vscode.window.onDidChangeActiveTextEditor((editor)=> {
@@ -213,7 +351,7 @@ class EditorGroupId {
 				for (let i=editors.length-1; i>=viewcol; --i){
 					this.viewColToId[i+1] = this.viewColToId[i];
 				}
-				this.viewColToId[viewcol] = this.createId();
+				this.viewColToId[viewcol] = this.create();
 			}
 			else if (viewcol < 0) {
 				for (let i=(-viewcol); i<=editors.length; ++i){
@@ -225,15 +363,13 @@ class EditorGroupId {
 		});
 		//this.print();
 	}
-	getId(viewColumn:number) {
+	getItem(viewColumn:number) {
 		return this.viewColToId[viewColumn];
 	}
 }
+*/
 
-namespace ScopeMarkStack {
-
-}
-
+/*
 class OnCursorLineIdle{
 	private uri;
 	private line;
@@ -277,6 +413,8 @@ class OnCursorLineIdle{
 		vscode.window.onDidChangeTextEditorSelection(this.update1);
 	}
 }
+*/
+
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -286,30 +424,15 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	//console.log('Congratulations, your extension "markstack" is now active!');
 
-	//var cursor_idle = new OnCursorLineIdle(function() {echo("Cursor line stopped")}, 2000);
-	//vscode.window.onDidChangeTextEditorSelection(function() {echo("Cursor changed")});
-	var editor_group_id = new EditorGroupId();
-	let disposable = vscode.commands.registerCommand('markstack.test', function(){
-		let ed = vscode.window.activeTextEditor;
-		if (ed) {
-			if (ed.viewColumn) {
-				echo(`id:${editor_group_id.getId(ed.viewColumn)} viewColumn:${ed.viewColumn}`);
-			}
-		}
-	});
-	//let f = (value:vscode.TextEditor, index: number, array: any) => {
-	//	L(`[index]${index} [vcol]${value.viewColumn} [uri]${value.document.uri.toString()}`);
-	//}
-	//vscode.window.visibleTextEditors.forEach(f);
 
-	//context.subscriptions.push(vscode.commands.registerCommand('markstack.push', markstack_push));
-	//context.subscriptions.push(vscode.commands.registerCommand('markstack.pop', markstack_pop));
-	//context.subscriptions.push(vscode.commands.registerCommand('markstack.currentEntry', markstack_current));
-	//context.subscriptions.push(vscode.commands.registerCommand('markstack.nextEntry', markstack_next));
-	//context.subscriptions.push(vscode.commands.registerCommand('markstack.prevEntry', markstack_prev));
-	//context.subscriptions.push(vscode.commands.registerCommand('markstack.print', markstack_print));
-	//context.subscriptions.push(vscode.commands.registerCommand('markstack.clear', markstack_clear));
-	context.subscriptions.push(disposable);
+	var groupMarkStack = new GroupMarkStack();
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.push', groupMarkStack.push));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.pop', groupMarkStack.pop));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.currentEntry', groupMarkStack.current));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.nextEntry', groupMarkStack.next));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.prevEntry', groupMarkStack.prev));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.print', groupMarkStack.print));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.clear', groupMarkStack.clear));
 }
 
 // this method is called when your extension is deactivated
