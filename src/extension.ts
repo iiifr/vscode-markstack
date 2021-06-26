@@ -163,12 +163,16 @@ class GroupMarkStack {
 	private create = () => {
 		return new MarkStack();
 	};
-	private checkId = (viewColumn:number) => {
+	private checkMs = (viewColumn:number) => {
 		if (this.viewColToMs[viewColumn] === undefined) {
 			this.viewColToMs[viewColumn] = this.create();
 		}
 	};
-
+	private getMs = () => {
+		let vc = vscode.window.activeTextEditor?.viewColumn;
+		if (vc === undefined) { return undefined; }
+		else { return this.viewColToMs[vc]; }
+	}
 	private windowChangedAtMiddle = (editors: vscode.TextEditor[]) => {
 		//return value
 		//+n: new window is at viewColumn n
@@ -203,7 +207,7 @@ class GroupMarkStack {
 		vscode.window.onDidChangeActiveTextEditor((editor)=> {
 			let viewcol = editor?.viewColumn;
 			if (viewcol !== undefined) {
-				this.checkId(viewcol);
+				this.checkMs(viewcol);
 			}
 			//this.debugPrint();
 			this.status();
@@ -234,12 +238,7 @@ class GroupMarkStack {
 
 	// ----------------------------------------------------------------------------
 
-	private getMs() {
-		let vc = vscode.window.activeTextEditor?.viewColumn;
-		if (vc === undefined) { return undefined; }
-		else { return this.viewColToMs[vc]; }
-	}
-	private status(){
+	private status = () => {
 		let ms = this.getMs();
 		if (ms !== undefined) { ms.status(this.statusItem); }
 	}
@@ -290,6 +289,29 @@ class GroupMarkStack {
 		}
 	}
 }
+
+// this method is called when your extension is activated
+// your extension is activated the very first time the command is executed
+export function activate(context: vscode.ExtensionContext) {
+
+	// Use the console to output diagnostic information (console.log) and errors (console.error)
+	// This line of code will only be executed once when your extension is activated
+	//console.log('Congratulations, your extension "markstack" is now active!');
+
+
+	var groupMarkStack = new GroupMarkStack();
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.push', groupMarkStack.push));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.pop', groupMarkStack.pop));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.currentEntry', groupMarkStack.current));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.nextEntry', groupMarkStack.next));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.prevEntry', groupMarkStack.prev));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.print', groupMarkStack.print));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.clear', groupMarkStack.clear));
+}
+
+// this method is called when your extension is deactivated
+export function deactivate() {}
+
 
 /*
 class EditorGroupId {
@@ -414,74 +436,3 @@ class OnCursorLineIdle{
 	}
 }
 */
-
-
-function markstack_status(){
-
-}
-
-class OnCursorLineIdle{
-	private uri;
-	private line;
-	private timeoutHandle;
-	private callback;
-	private idle_ms;
-	private update1 = () => {
-		clearTimeout(this.timeoutHandle);
-		let editor = vscode.window.activeTextEditor;
-		if (editor) {
-			let uri = editor.document.uri.toString();
-			let line = editor.selection.end.line;
-			if (this.uri != uri || this.line != line) {
-				this.uri = uri;
-				this.line = line;
-				this.timeoutHandle = setTimeout(this.update2, this.idle_ms);
-			}
-			//echo(`${this.uri} L${this.line}`);
-		}
-		else {
-			this.uri = '';
-			this.line = -1;
-		}
-	}
-	private update2 = () => {
-		let editor = vscode.window.activeTextEditor;
-		if (editor) {
-			if (editor.document.uri.toString() == this.uri && editor.selection.end.line == this.line) {
-				this.callback();
-			}
-		}
-	}
-
-	constructor(callback: () => void, idle_ms: number) {
-		this.callback = callback;
-		this.idle_ms = idle_ms;
-		this.uri = '';
-		this.line = -1;
-		this.timeoutHandle = setTimeout(()=>{}, 0);
-
-		vscode.window.onDidChangeTextEditorSelection(this.update1);
-	}
-}
-
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	//console.log('Congratulations, your extension "markstack" is now active!');
-
-
-	var groupMarkStack = new GroupMarkStack();
-	context.subscriptions.push(vscode.commands.registerCommand('markstack.push', groupMarkStack.push));
-	context.subscriptions.push(vscode.commands.registerCommand('markstack.pop', groupMarkStack.pop));
-	context.subscriptions.push(vscode.commands.registerCommand('markstack.currentEntry', groupMarkStack.current));
-	context.subscriptions.push(vscode.commands.registerCommand('markstack.nextEntry', groupMarkStack.next));
-	context.subscriptions.push(vscode.commands.registerCommand('markstack.prevEntry', groupMarkStack.prev));
-	context.subscriptions.push(vscode.commands.registerCommand('markstack.print', groupMarkStack.print));
-	context.subscriptions.push(vscode.commands.registerCommand('markstack.clear', groupMarkStack.clear));
-}
-
-// this method is called when your extension is deactivated
-export function deactivate() {}
