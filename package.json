@@ -2,7 +2,7 @@
 	"name": "markstack",
 	"displayName": "MarkStack",
 	"description": "Store document location into stack",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"publisher": "iiifr",
 	"engines": {
 		"vscode": "^1.53.2"
@@ -18,35 +18,55 @@
 		"commands": [
 			{
 				"command": "markstack.push",
-				"title": "Push location into mark stack"
+				"title": "MarkStack: Push Location"
 			},
 			{
 				"command": "markstack.pop",
-				"title": "Pop location from mark stack"
+				"title": "MarkStack: Pop Location"
 			},
 			{
-				"command": "markstack.nextEntry",
-				"title": "Next entry in mark stack"
+				"command": "markstack.insertBefore",
+				"title": "MarkStack: Insert Location before Current Entry"
 			},
 			{
-				"command": "markstack.prevEntry",
-				"title": "Previous entry in mark stack"
+				"command": "markstack.insertAfter",
+				"title": "MarkStack: Insert Location after Current Entry"
+			},
+			{
+				"command": "markstack.replaceEntry",
+				"title": "MarkStack: Replace the Current entry"
+			},
+			{
+				"command": "markstack.deleteEntry",
+				"title": "MarkStack: Delete the Current Entry"
 			},
 			{
 				"command": "markstack.currentEntry",
-				"title": "Current entry in mark stack"
+				"title": "MarkStack: Current Entry"
+			},
+			{
+				"command": "markstack.nextEntry",
+				"title": "MarkStack: Next Entry"
+			},
+			{
+				"command": "markstack.prevEntry",
+				"title": "MarkStack: Previous Entry"
+			},
+			{
+				"command": "markstack.nearbyEntry",
+				"title": "MarkStack: Nerby Entry"
 			},
 			{
 				"command": "markstack.print",
-				"title": "Print mark stack"
+				"title": "MarkStack: Print Stack"
 			},
 			{
 				"command": "markstack.clear",
-				"title": "Clear mark stack"
+				"title": "MarkStack: Clear Stack"
 			},
 			{
 				"command": "markstack.test",
-				"title": "mark stack test"
+				"title": "MarkStack: Test"
 			}
 		]
 	},

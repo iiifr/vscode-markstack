@@ -1,6 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 const L = console.log;
 const echo = vscode.window.showInformationMessage;
@@ -8,18 +9,7 @@ const echo = vscode.window.showInformationMessage;
 class MarkStack {
 	private ms = new Array<{}>();
 	private ms_ptr = -1;
-	private push_ms(uri: vscode.Uri, pos: vscode.Position, name: string, text: vscode.TextLine){
-		this.ms.push({uri: uri, pos: pos, name: name, text: text});
-	}
-	private pop_ms() { return this.ms.pop(); }
-	private set_ms_pointer(val: number) { this.ms_ptr = val; }
-	private get_ms_pointer() { return this.ms_ptr; }
-	private del_ms() { this.ms = new Array<{}>(); this.ms_ptr = -1; }
-	private ms_exist() { return (this.ms.length != 0); }
-	private ms_empty() { return (this.ms.length == 0); }
-	private get_ms_len() { return this.ms.length; }
-
-	push(){
+	private create_entry(){
 		let editor = vscode.window.activeTextEditor;
 		let wsfolder = vscode.workspace.workspaceFolders;
 		if (editor && wsfolder){
@@ -28,10 +18,53 @@ class MarkStack {
 			let doc_uri = editor.document.uri;
 			let docname = doc_uri.toString().replace(wsf_uri.toString()+"/", "");
 			let text = editor.document.lineAt(s.start);
-			this.push_ms(doc_uri, s.start, docname, text);
+			return {uri: doc_uri, pos: s.start, name: docname, text: text};
+		}
+		return undefined;
+	}
+	private push_ms(entry:{}) { this.ms.push(entry); }
+	private pop_ms() { return this.ms.pop(); }
+	private set_ms_pointer(val: number) { this.ms_ptr = val; }
+	private get_ms_pointer() { return this.ms_ptr; }
+	private del_ms() { this.ms = new Array<{}>(); this.ms_ptr = -1; }
+	private ms_exist() { return (this.ms.length != 0); }
+	private ms_empty() { return (this.ms.length == 0); }
+	private get_ms_len() { return this.ms.length; }
+
+	private static readonly statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 500);
+	private static readonly decoration = vscode.window.createTextEditorDecorationType(
+	{
+		light: {
+			gutterIconPath: path.join(__dirname, '..', 'resources', 'light', 'mark.svg'),
+			gutterIconSize: '65%'
+		},
+		dark: {
+			gutterIconPath: path.join(__dirname, '..', 'resources', 'dark', 'mark.svg'),
+			gutterIconSize: '65%'
+		}
+	});
+	private static readonly decorationCurrent = vscode.window.createTextEditorDecorationType(
+	{
+		light: {
+			gutterIconPath: path.join(__dirname, '..', 'resources', 'light', 'mark_current.svg'),
+			gutterIconSize: '65%'
+		},
+		dark: {
+			gutterIconPath: path.join(__dirname, '..', 'resources', 'dark', 'mark_current.svg'),
+			gutterIconSize: '65%'
+		}
+	});
+
+	push(){
+		let editor = vscode.window.activeTextEditor;
+		let wsfolder = vscode.workspace.workspaceFolders;
+		let entry = this.create_entry();
+		if (entry !== undefined){
+			this.push_ms(entry);
 			let l = this.get_ms_len();
 			this.set_ms_pointer(l-1);
-			echo(`MarkStack: ${docname} L${s.start.line+1} C${s.start.character+1} pushed, len=${l}`);
+			echo(`[MarkStack] pushed, LEN:${l}`);
+			//echo(`[MarkStack] ${entry.name} Ln${entry.pos.line+1},Col${entry.pos.character+1} pushed, LEN:${l}`);
 			//L("WS URI: " + wsf_uri.toString());
 			//L("DOC URI: " + editor.document.uri.toString());
 			//L("DOC TXT: " + text);
@@ -47,20 +80,68 @@ class MarkStack {
 			);
 			let l = this.get_ms_len();
 			this.set_ms_pointer(l-1);
-			echo("MarkStack: popped out, len=" + l);
+			echo(`[MarkStack] popped, LEN:${l}`);
 		}
 		else {
-			echo("MarkStack: no mark");
+			echo("[MarkStack] no mark");
 		}
+	}
+	insertBefore(){
+		if (!this.ms_exist()) {
+			this.push();
+			return;
+		}
+		let entry = this.create_entry();
+		if (entry !== undefined) {
+			let index = this.ms_ptr;
+			this.ms.splice(index, 0, entry);
+			echo(`[MarkStack] insert before IDX:${index}, LEN:${this.ms.length}`);
+		}
+	}
+	insertAfter(){
+		if (this.ms_ptr == this.ms.length - 1) {
+			this.push();
+			return;
+		}
+		let entry = this.create_entry();
+		if (entry !== undefined) {
+			let index = this.ms_ptr;
+			this.ms.splice(index + 1, 0, entry);
+			this.ms_ptr = index + 1;
+			echo(`[MarkStack] insert after IDX:${index}, LEN:${this.ms.length}`);
+		}
+	}
+	replace(){
+		if (!this.ms_exist()) {
+			echo("[MarkStack] no mark");
+			return;
+		}
+		let entry = this.create_entry();
+		if (entry !== undefined) {
+			this.ms[this.ms_ptr] = entry;
+			echo(`[MarkStack] IDX:${this.ms_ptr} replaced, LEN:${this.ms.length}`);
+		}
+	}
+	delete(){
+		if (!this.ms_exist()) {
+			echo("[MarkStack] no mark");
+			return;
+		}
+		let index = this.ms_ptr;
+		this.ms.splice(index, 1);
+		if (this.ms_ptr >= this.ms.length) {
+			this.ms_ptr = this.ms.length - 1;
+		}
+		echo(`[MarkStack] IDX:${index} deleted, LEN:${this.ms.length}`);
 	}
 	current(){
 		if (!this.ms_exist()) {
-			echo("MarkStack: no mark");
+			echo("[MarkStack] no mark");
 			return;
 		}
 		let pointer = this.get_ms_pointer();
 		if (pointer==-1) {
-			echo("MarkStack: no mark");
+			echo("[MarkStack] no mark");
 			return;
 		}
 		let entry:any = this.ms[pointer];
@@ -70,17 +151,17 @@ class MarkStack {
 			entry.uri,
 			{preserveFocus: false, preview: false, selection: sel}
 		);
-		echo(`MarkStack: DEPTH:${topidx-pointer} INDEX:${pointer}`);
+		echo(`[MarkStack] IDX:${pointer} DEPTH:${topidx-pointer}`);
 		//markstack_print();
 	}
 	next(){
 		if (!this.ms_exist()) {
-			echo("MarkStack: no mark");
+			echo("[MarkStack] no mark");
 			return;
 		}
 		let pointer = this.get_ms_pointer();
 		if (pointer==-1) {
-			echo("MarkStack: no mark");
+			echo("[MarkStack] no mark");
 			return;
 		}
 		let topidx = this.get_ms_len() - 1;
@@ -95,18 +176,18 @@ class MarkStack {
 			entry.uri,
 			{preserveFocus: false, preview: false, selection: sel}
 		);
-		echo(`MarkStack: DEPTH:${topidx-pointer} INDEX:${pointer}`);
+		echo(`[MarkStack] IDX:${pointer} DEPTH:${topidx-pointer}`);
 		this.set_ms_pointer(pointer);
 		//markstack_print();
 	}
 	prev(){
 		if (!this.ms_exist()){
-			echo("MarkStack: no mark");
+			echo("[MarkStack] no mark");
 			return;
 		}
 		let pointer = this.get_ms_pointer();
 		if (pointer==-1){
-			echo("MarkStack: no mark");
+			echo("[MarkStack] no mark");
 			return;
 		}
 		let topidx = this.get_ms_len() - 1;
@@ -121,19 +202,48 @@ class MarkStack {
 			entry.uri,
 			{preserveFocus: false, preview: false, selection: sel}
 		);
-		echo(`MarkStack: DEPTH:${topidx-pointer} INDEX:${pointer}`);
+		echo(`[MarkStack] IDX:${pointer} DEPTH:${topidx-pointer}`);
 		this.set_ms_pointer(pointer);
 		//markstack_print();
 	}
+	nearby(){
+		let editor = vscode.window.activeTextEditor;
+		if (editor === undefined) {
+			return;
+		}
+		let range = editor.visibleRanges[0];
+		let cursor = editor.selection.start;
+		let uri = editor.document.uri;
+		if (uri !== undefined && range !== undefined && cursor !== undefined) {
+			let pointer:any = undefined;
+			let distance = 2*(range.end.line - range.start.line);
+			for(let i =0; i < this.ms.length; ++i) {
+				let entry:any = this.ms[i];
+				if (entry.uri == uri && range.contains(entry.pos)) {
+					if (Math.abs(entry.pos.line - cursor.line) < distance){
+						pointer = i;
+						distance = Math.abs(entry.pos.line - cursor.line);
+					}
+				}
+			}
+
+			if (pointer !== undefined) {
+				this.set_ms_pointer(pointer);
+				let entry:any = this.ms[pointer];
+				editor.selection = new vscode.Selection(entry.pos, entry.pos);
+				echo(`[MarkStack] IDX:${pointer} DEPTH:${(this.ms.length-1)-pointer}`);
+			}
+		}
+	}
 	print(){
 		if (!this.ms_exist()){
-			echo("MarkStack: no mark");
+			echo("[MarkStack] no mark");
 			return;
 		}
 		let stack:Array<any> = this.ms;
 		let pointer = this.ms_ptr;
 		let s = "";
-		s += "MarkStack:\n";
+		s += "[MarkStack]\n";
 		s += " idx : line : col : file : text\n";
 		for (let i=0; i<stack.length; ++i) {
 			let pos:vscode.Position = stack[i].pos;
@@ -150,16 +260,35 @@ class MarkStack {
 	}
 	clear(){
 		this.del_ms();
-		echo("MarkStack: stack cleared");
+		echo("[MarkStack] stack cleared");
 	}
-	status(item:vscode.StatusBarItem){
-		item.text = `[MS] LEN:${this.get_ms_len()} IDX:${this.get_ms_pointer()}`;
+	status(){
+		MarkStack.statusItem.text = `[MS] LEN:${this.get_ms_len()} IDX:${this.get_ms_pointer()}`;
+		MarkStack.statusItem.show();
+
+		let uri = vscode.window.activeTextEditor?.document.uri;
+		if (uri !== undefined) {
+			let markpos:vscode.Range[] = [];
+			let current_markpos:vscode.Range[] = [];
+			this.ms.forEach((entry:any, index, array) => {
+				if (index != this.ms_ptr && entry.uri == uri) {
+					markpos.push(new vscode.Range(entry.pos, entry.pos));
+				}
+			});
+			if (this.ms_ptr >= 0) {
+				let entry:any = this.ms[this.ms_ptr];
+				if (entry.uri == uri) {
+					current_markpos.push(new vscode.Range(entry.pos, entry.pos));
+				}
+			}
+			vscode.window.activeTextEditor?.setDecorations(MarkStack.decoration, markpos);
+			vscode.window.activeTextEditor?.setDecorations(MarkStack.decorationCurrent, current_markpos);
+		}
 	}
 }
 
 class GroupMarkStack {
 	private viewColToMs:MarkStack[] = [];
-	private statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 500);
 	private create = () => {
 		return new MarkStack();
 	};
@@ -230,7 +359,6 @@ class GroupMarkStack {
 		});
 		//this.debugPrint();
 		this.status();
-		this.statusItem.show();
 	}
 	getItem(viewColumn:number) {
 		return this.viewColToMs[viewColumn];
@@ -240,41 +368,76 @@ class GroupMarkStack {
 
 	private status = () => {
 		let ms = this.getMs();
-		if (ms !== undefined) { ms.status(this.statusItem); }
+		if (ms !== undefined) { ms.status(); }
 	}
 	push = () => {
 		let ms = this.getMs();
 		if (ms !== undefined) {
 			ms.push();
-			ms.status(this.statusItem);
+			ms.status();
 		}
 	}
 	pop = () => {
 		let ms = this.getMs();
 		if (ms !== undefined) {
 			ms.pop();
-			ms.status(this.statusItem);
+			ms.status();
 		}
+	}
+	insertBefore = () => {
+		let ms = this.getMs();
+		if (ms !== undefined) {
+			ms.insertBefore();
+			ms.status();
+		}
+	}
+	insertAfter = () => {
+		let ms = this.getMs();
+		if (ms !== undefined) {
+			ms.insertAfter();
+			ms.status();
+		}
+	}
+	replace = () => {
+		let ms = this.getMs();
+		if (ms !== undefined) {
+			ms.replace();
+			ms.status();
+	 	}
+	}
+	delete = () => {
+		let ms = this.getMs();
+		if (ms !== undefined) {
+			ms.delete();
+			ms.status();
+	 	}
 	}
 	current = () => {
 		let ms = this.getMs();
 		if (ms !== undefined) {
 			ms.current();
-			ms.status(this.statusItem);
+			ms.status();
 	 	}
 	}
 	next = () => {
 		let ms = this.getMs();
 		if (ms !== undefined) {
 			ms.next();
-			ms.status(this.statusItem);
+			ms.status();
 		}
 	}
 	prev = () => {
 		let ms = this.getMs();
 		if (ms !== undefined) {
 			ms.prev();
-			ms.status(this.statusItem);
+			ms.status();
+		}
+	}
+	nearby = () => {
+		let ms = this.getMs();
+		if (ms !== undefined) {
+			ms.nearby();
+			ms.status();
 		}
 	}
 	print = () => {
@@ -285,7 +448,7 @@ class GroupMarkStack {
 		let ms = this.getMs();
 		if (ms !== undefined) {
 			ms.clear();
-			ms.status(this.statusItem);
+			ms.status();
 		}
 	}
 }
@@ -302,9 +465,14 @@ export function activate(context: vscode.ExtensionContext) {
 	var groupMarkStack = new GroupMarkStack();
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.push', groupMarkStack.push));
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.pop', groupMarkStack.pop));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.insertBefore', groupMarkStack.insertBefore));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.insertAfter', groupMarkStack.insertAfter));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.deleteEntry', groupMarkStack.delete));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.replaceEntry', groupMarkStack.replace));
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.currentEntry', groupMarkStack.current));
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.nextEntry', groupMarkStack.next));
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.prevEntry', groupMarkStack.prev));
+	context.subscriptions.push(vscode.commands.registerCommand('markstack.nearbyEntry', groupMarkStack.nearby));
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.print', groupMarkStack.print));
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.clear', groupMarkStack.clear));
 }
