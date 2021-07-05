@@ -2,7 +2,7 @@
 	"name": "markstack",
 	"displayName": "MarkStack",
 	"description": "Store document location into stack",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"publisher": "iiifr",
 	"engines": {
 		"vscode": "^1.53.2"

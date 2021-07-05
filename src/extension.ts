@@ -7,7 +7,7 @@ const L = console.log;
 const echo = vscode.window.showInformationMessage;
 
 class MarkStack {
-	private ms = new Array<{}>();
+	ms = new Array<{}>();
 	private ms_ptr = -1;
 	private create_entry(){
 		let editor = vscode.window.activeTextEditor;
@@ -211,21 +211,22 @@ class MarkStack {
 		if (editor === undefined) {
 			return;
 		}
-		let range = editor.visibleRanges[0];
 		let cursor = editor.selection.start;
 		let uri = editor.document.uri;
-		if (uri !== undefined && range !== undefined && cursor !== undefined) {
+		let distance:number = Number.MAX_SAFE_INTEGER;
+		if (uri !== undefined  && cursor !== undefined) {
 			let pointer:any = undefined;
-			let distance = 2*(range.end.line - range.start.line);
-			for(let i =0; i < this.ms.length; ++i) {
-				let entry:any = this.ms[i];
-				if (entry.uri == uri && range.contains(entry.pos)) {
-					if (Math.abs(entry.pos.line - cursor.line) < distance){
-						pointer = i;
-						distance = Math.abs(entry.pos.line - cursor.line);
+			editor.visibleRanges.forEach((range, index, array) => {
+				for(let i =0; i < this.ms.length; ++i) {
+					let entry:any = this.ms[i];
+					if (entry.uri == uri && range.contains(entry.pos)) {
+						if (Math.abs(entry.pos.line - cursor.line) < distance){
+							pointer = i;
+							distance = Math.abs(entry.pos.line - cursor.line);
+						}
 					}
 				}
-			}
+			});
 
 			if (pointer !== undefined) {
 				this.set_ms_pointer(pointer);
@@ -297,7 +298,7 @@ class GroupMarkStack {
 			this.viewColToMs[viewColumn] = this.create();
 		}
 	};
-	private getMs = () => {
+	getMs = () => {
 		let vc = vscode.window.activeTextEditor?.viewColumn;
 		if (vc === undefined) { return undefined; }
 		else { return this.viewColToMs[vc]; }
@@ -475,6 +476,8 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.nearbyEntry', groupMarkStack.nearby));
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.print', groupMarkStack.print));
 	context.subscriptions.push(vscode.commands.registerCommand('markstack.clear', groupMarkStack.clear));
+	//context.subscriptions.push(vscode.commands.registerCommand('markstack.test', () => {
+	//}));
 }
 
 // this method is called when your extension is deactivated
