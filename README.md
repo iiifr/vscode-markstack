@@ -23,3 +23,7 @@ More stack operation, show marked line at decoration column.
 ### 1.2.1
 
 Finding nearby mark works when code folding.
+
+### 1.2.2
+
+Update mark position when document text changed

@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 
 const L = console.log;
 const echo = vscode.window.showInformationMessage;
@@ -306,14 +307,14 @@ class MarkStack {
 					current_markpos.push(new vscode.Range(entry.pos, entry.pos));
 				}
 			}
-			vscode.window.activeTextEditor?.setDecorations(MarkStack.decoration, markpos);
 			vscode.window.activeTextEditor?.setDecorations(MarkStack.decorationCurrent, current_markpos);
+			vscode.window.activeTextEditor?.setDecorations(MarkStack.decoration, markpos);
 		}
 	}
 }
 
 class GroupMarkStack {
-	viewColToMs:MarkStack[] = [];
+	private viewColToMs:MarkStack[] = [];
 	private create = () => {
 		return new MarkStack();
 	};
@@ -322,7 +323,7 @@ class GroupMarkStack {
 			this.viewColToMs[viewColumn] = this.create();
 		}
 	};
-	getMs = () => {
+	private getMs = () => {
 		let vc = vscode.window.activeTextEditor?.viewColumn;
 		if (vc === undefined) { return undefined; }
 		else { return this.viewColToMs[vc]; }
@@ -558,7 +559,13 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+	//let s = ""
+	//vscode.window.visibleTextEditors.forEach((ed, index) => {
+	//	s += `idx:${index} viewcol:${ed.viewColumn}\n`
+	//});
+	//fs.writeFile("C:\\Users\\iscre\\Desktop\\check.txt", s, (err) => {});
+}
 
 
 /*
